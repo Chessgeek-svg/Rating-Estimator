@@ -48,9 +48,9 @@ def provisional_rating():
 
     #Get each opps rating by round, then average them
     opponent_ratings = 0
-    for i in range(1, (rounds+1)):
+    for round_number in range(1, (rounds+1)):
         while True:
-            temp_opp_rating = input(f"What was your opponent's rating in round {i}? ")
+            temp_opp_rating = input(f"What was your opponent's rating in round {round_number}? ")
             if is_valid(temp_opp_rating) == True:
                 opponent_ratings += (int(temp_opp_rating))
                 break
@@ -98,9 +98,9 @@ def established_rating(current_rating):
 
     #Take each opponents rating, generate the win probability against this opponent from the user's given rating, and add together to get a total expected score. The win probability formula defined in win_expectancy was devised by the USCF for their rating system
     expected_score = 0
-    for i in range(1, (rounds+1)):
+    for round_number in range(1, (rounds+1)):
         while True:
-            temp_opp_rating = input(f"What was your opponent's rating in round {i}? ")
+            temp_opp_rating = input(f"What was your opponent's rating in round {round_number}? ")
             if is_valid(temp_opp_rating) == True:
                 expected_score += (win_expectancy(float(current_rating), float(temp_opp_rating)))
                 break
@@ -111,7 +111,7 @@ def established_rating(current_rating):
         game_total = input(f"Roughly how many rated games had you played before this tournament? ")
         try:
             game_total = int(game_total)
-            if game_total <= 0:  # if not a positive int print message and ask for input again
+            if game_total <= 0:
                 print("Invalid entry. Number of games must be positive")
                 continue
             break
@@ -124,7 +124,6 @@ def established_rating(current_rating):
     K = 800/(effective_games + rounds)
 
     while True:
-
         score = input("What was your total score? Treat a win as 1 point, draw as 0.5 points, and a loss as 0 points. ")
         try:
             score = float(score)
