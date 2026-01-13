@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
+        </script>
+        <link href="styles.css" rel="stylesheet">
+        <meta charset="UTF-8">
+        <meta name="author" content="RJD">
+        <meta name="description" content="A take on the USCF rating estimator">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rating Estimator</title>
+    </head>
+
+    <body>
+        <h1>USCF RATING ESTIMATOR</h1>
+        <div class="container text-center mx-auto center">
+            <div class="row mx-auto center" style="border:none;">
+                <div class="col-md-1 center">
+                    <div class="">
+                        <label for="rounds">Rounds:</label>
+                        <input type="number" name="rounds" id="rounds" min="1" max="20" step="1" class="form-control" style="width: 100px; margin:auto;" value="4" required>
+                    </div>
+                </div>
+                <div class="col-md-1 center">
+                    <div class="">
+                        <label for="score">Score:</label>
+                        <input type="number" name="score" id="score" min="0" step="0.5" class="form-control" style="width: 100px; margin:auto;" value="0" required>
+                    </div>
+                </div>
+                <div class="col-md-1 center">
+                    <div class="">
+                        <label for="currentRating" class="label-nowrap">Current Rating:</label>
+                        <input type="text" id="currentRating" inputmode="numeric" name="currentRating" min="100" max="3000" pattern="[0-9]*" class="form-control" style="width: 100px; margin:auto;">
+                    </div>
+                </div>
+                <div class="col-md-1 center">
+                    <div class="">
+                        <label for="priorGames" class="label-nowrap">Prior Games:</label>
+                        <input type="text" id="priorGames" name="priorGames" class="form-control" style="width: 100px; margin:auto;" value="50+">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row justify-content-center center" id="dynamicInputs" style="margin:auto"></div>
+            <br>
+
+            <button id = "rate" class="btn btn-primary" type="button">Rate</button>
+            <button class="btn btn-secondary" type="button" id="clearForm">Clear Form</button>
+            <br>
+            <br>
+
+            <table id="results" class="table table-bordered" style="display:none;">
+                <tr class="align-middle">
+                    <td id="newRating" class="text-center" style="border-right:3px solid #3d405B">New Rating:</td>
+                    <td id="normEarned" class="text-center" style="border-right:3px solid #3d405B">Norm Earned:</td>
+                    <td id="performanceRating" class="text-center">Performance Rating:</td>
+                </tr>
+            </table>
+
+            <br>
+            <div>
+            <table id= "normTable" class="table table-hover table-sm" >
+                <thead>
+                    <tr>
+                        <th>Norm Level</th>
+                        <th>Minimum Score</th>
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider">
+                    <tr>
+                        <td>4th Category Master (1200)</td>
+                        <td id="cell-1200"></td>
+                    </tr>
+                    <tr>
+                        <td>3rd Category Master (1400)</td>
+                        <td id="cell-1400"></td>
+                    </tr>
+                    <tr>
+                        <td>2nd Category Master (1600)</td>
+                        <td id="cell-1600"></td>
+                    </tr>
+                    <tr>
+                        <td>1st Category Master (1800)</td>
+                        <td id="cell-1800"></td>
+                    </tr>
+                    <tr>
+                        <td>Candidate Master (2000)</td>
+                        <td id="cell-2000"></td>
+                    </tr>
+                    <tr>
+                        <td>Life Master (2200)</td>
+                        <td id="cell-2200"></td>
+                    </tr>
+                    <tr>
+                        <td>Life Senior Master (2400)</td>
+                        <td id="cell-2400"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            const roundsInput = document.getElementById('rounds');
+            const scoreInput = document.getElementById('score');
+            const currentRatingInput = document.getElementById('currentRating');
+            const priorGamesInput = document.getElementById('priorGames');
+            const dynamicInputsContainer = document.getElementById('dynamicInputs');
+            const clearFormButton = document.getElementById('clearForm');
+            const rateButton = document.getElementById("rate");
+            const maxScore = roundsInput.value;
+
+            document.addEventListener("DOMContentLoaded", function () {
+                updateInputs(roundsInput.value, dynamicInputsContainer.querySelectorAll('.opponent').length);
+
+                roundsInput.addEventListener("input", function () {
+                    roundsInput.value = roundsInput.value.replace(/[^0-9]/g, '');
+                    const numberOfRounds = parseInt(roundsInput.value, 10);
+                    const currentInputs = dynamicInputsContainer.querySelectorAll('.opponent').length;
+
+                    // Check if the new number of rounds is different from the current number of inputs
+                    if (numberOfRounds !== currentInputs) {
+                        updateInputs(numberOfRounds, currentInputs)
+                    }
+
+                    // If the score is greater than possible, lower it to the max possible
+                    const score = parseFloat(scoreInput.value);
+                    const maxScore = numberOfRounds
+
+                    if (score > maxScore) {
+                        scoreInput.value = maxScore;
+                    }
+                });
+
+                scoreInput.addEventListener('input', function () {
+                    const score = parseFloat(scoreInput.value);
+                    const maxScore = parseFloat(roundsInput.value);
+
+                    if (score > maxScore) {
+                        scoreInput.value = maxScore;
+                    } else if (score < 0) {
+                        scoreInput.value = 0;
+                    }
+                });
+
+                currentRatingInput.addEventListener('input', function(){
+                    currentRating.value = currentRating.value.replace(/[^0-9]/g, '');
+                })
+
+                priorGamesInput.addEventListener('input', function () {
+                    priorGames.value = priorGames.value.replace(/[^0-9+]/g, '');
+                });
+
+                clearFormButton.addEventListener('click', function () {
+
+                    // Reset the input fields to their default values; for the time being I'm leaving rounds as is
+                    scoreInput.value = '0';
+                    priorGamesInput.value = '50+';
+                    currentRatingInput.value = '';
+
+                    // Clear the values in the dynamically generated input fields
+                    const opponentInputs = dynamicInputsContainer.querySelectorAll('.opponent');
+                    opponentInputs.forEach(input => {
+                        input.value = '';
+                    });
+
+                    results.style.display = "none";
+                    clearCells();
+
+
+                    // Update the dynamic inputs
+                    updateInputs(roundsInput.value, dynamicInputsContainer.querySelectorAll('.opponent').length);
+                });
+                // Function to update dynamic inputs
+                function updateInputs(numberOfRounds, currentInputs) {
+                    // Get all existing input fields
+                    const existingInputs = dynamicInputsContainer.querySelectorAll('.opponent');
+
+                    // Clear the dynamicInputsContainer to start fresh
+                    dynamicInputsContainer.innerHTML = '';
+
+                    for (let i = 0; i < numberOfRounds; i++) {
+                        // Create a new row for every two input fields
+                        if (i % 2 === 0) {
+                        var row = document.createElement('div');
+                        row.classList.add('row');
+                        dynamicInputsContainer.appendChild(row);
+                        }
+
+                        // Create a column for each input field
+                        var col = document.createElement('div');
+                        col.classList.add('col-sm-6');
+
+                        var inputLabel = document.createElement('label');
+                        inputLabel.classList.add('opponentLabel');
+                        inputLabel.classList.add('label-nowrap');
+                        inputLabel.textContent = `Round ${i + 1}:`;
+                        inputLabel.classList.add('center-label');
+
+                        var inputField = document.createElement('input');
+                        inputField.classList.add('opponent');
+                        inputField.classList.add('form-control');
+                        inputField.type = 'number';
+                        inputField.name = `round_${i + 1}`;
+                        inputField.id = `round_${i + 1}`;
+
+                        // Set the value of the new input field to the corresponding value of an existing field (if it exists)
+                        const existingInput = existingInputs[i];
+                        if (existingInput) {
+                        inputField.value = existingInput.value;
+                        }
+
+                        col.appendChild(inputLabel);
+                        col.appendChild(inputField);
+                        row.appendChild(col);
+                    }
+                }
+
+                rateButton.addEventListener("click", function () {
+                    clearCells();
+                    // Check if required elements haven't been bypassed
+                    if (!roundsInput.value) {
+                        alert("Must provide rounds");
+                        return
+                    } else if (roundsInput.value < 1 || roundsInput.value > 20){
+                        alert("Invalid number of rounds");
+                        return
+                    } else if (!scoreInput.value) {
+                        alert("Must provide score");
+                        return
+                    } else if(scoreInput.value < 0 || (scoreInput.value *2) % 1 !== 0){
+                        alert("Invalid score. Please enter a positive number, possibly with a .5 (e.g. 1.5)")
+                        return
+                    }
+
+                    let numberOfRounds = parseInt(roundsInput.value, 10);
+                    let scores = parseFloat(scoreInput.value);
+
+                    if (scores > numberOfRounds){
+                        alert("Score cannot be greater than the number of rounds")
+                        return
+                    }
+
+                    let currentRating = 0;
+                    if (currentRatingInput.value) {
+                        if (currentRatingInput.value < 100){
+                            currentRatingInput.value = 100;
+                        } else if (currentRatingInput.value > 3000){
+                            currentRatingInput.value = 3000;
+                        }
+
+                        currentRating = parseInt(currentRatingInput.value, 10);
+                    }
+
+                    let priorGames = 0;
+                    if (priorGamesInput.value) {
+                        if (priorGamesInput.value === "50+") {
+                            priorGames = 50;
+                        } else {
+                            priorGames = parseInt(priorGamesInput.value, 10);
+                        }
+                    }
+                    const opponentRatings = [];
+                    // Iterate through each round to add the opponent's rating to an array that will be used for calculations
+                    for (let i = 1; i <= numberOfRounds; i++) {
+                        try {
+                            const ratingInput = document.getElementById(`round_${i}`);
+                            const rating = parseInt(ratingInput.value, 10);
+                            if (rating >= 100 && rating <= 3000) {
+                                opponentRatings.push(rating);
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }}
+
+                    // Check that there was an entry into the opponentRatings array
+                    numberOfRounds = opponentRatings.length;
+                    if (numberOfRounds < 1) {
+                        alert("No valid opponent ratings found");
+                        return
+                    } else if (scores > numberOfRounds) {
+                        alert("Score greater than number of valid opponent ratings");
+                        return
+                    }
+
+                    results.style.display = "table";
+                    //Display earned norms, if any
+                    normEarned = normCheck(scores, opponentRatings, numberOfRounds)
+                    const normEarnedParagraph = document.getElementById("normEarned");
+                    if (normEarned !== null){
+                        normEarnedParagraph.innerHTML = "Norm Earned:<br>" + normEarned;
+                    } else {
+                        normEarnedParagraph.innerHTML = "Norm Earned:<br>" +  "N/A";
+                    }
+
+                    let newRating, performanceRating;
+
+                    //Calculate and display performance rating
+                    performanceRating = performanceRatingCalculation(scores, opponentRatings, numberOfRounds);
+                    const performanceRatingParagraph = document.getElementById("performanceRating");
+                    performanceRatingParagraph.innerHTML = "Performance Rating:<br>" + performanceRating;
+
+                    //The USCF uses a provisional rating formula for players with fewer than eight games played, and the standard (or established as I've called it) formula otherwise
+                    if (parseInt(priorGames) > 8 && currentRating !== 0) {
+                        newRating = establishedRatingCalculation(opponentRatings, scores, currentRating, priorGames, numberOfRounds)
+                        const newRatingParagraph = document.getElementById("newRating");
+                        newRatingParagraph.innerHTML = "New Rating:<br>" + newRating;
+
+                    } else if (parseInt(priorGames) >= 1 && parseInt(priorGames) <= 8) {
+                        // In this loop, treat each prior game as a draw against a player with their provisional rating. This will properly weight the user's previous games in determining the new provisional rating
+                        if (currentRating !== 0) {
+                            for (let i = 0; i < parseInt(priorGames); i++) {
+                                opponentRatings.push(currentRating);
+                                scores += 0.5;
+                            }
+                            numberOfRounds = opponentRatings.length;
+                            newRating = provisionalRatingCalculation(scores, opponentRatings, numberOfRounds);
+                            const newRatingParagraph = document.getElementById("newRating");
+                            newRatingParagraph.innerHTML = "New Rating:<br>" + newRating;
+                        } else {
+                            newRating = performanceRating;
+                            const newRatingParagraph = document.getElementById("newRating");
+                            newRatingParagraph.innerHTML = "New Rating:<br>" + newRating;
+                        }
+                    //If there is nothing that would call for the use of the provisional formula, use the standard one instead
+                    } else {
+                        newRating = performanceRating;
+                        const newRatingParagraph = document.getElementById("newRating");
+                        newRatingParagraph.innerHTML = "New Rating:<br>" + newRating;
+                    }
+                    });
+
+            function establishedRatingCalculation(opponentRatings, scores, currentRating, priorGames, numberOfRounds){
+
+                // Calculate expected score
+                let expectedScore = 0;
+                for (let i = 0; i < numberOfRounds; i++) {
+                    expectedScore += winExpectancy(parseFloat(currentRating), parseFloat(opponentRatings[i]));
+                }
+
+                // Calculate effective games and K factor
+                let effectiveGames;
+                if (currentRating > 2355) {
+                    effectiveGames = Math.min(priorGames, 50);
+                } else {
+                    effectiveGames = Math.min(priorGames, 50 / (Math.sqrt(0.662 + 0.00000739 * Math.pow(2569 - currentRating, 2))));
+                }
+                const K = 800 / (effectiveGames + numberOfRounds);
+
+                //Use K to determine bonus
+                let bonus = 0;
+                if (numberOfRounds >= 3){
+                    numberOfRounds = Math.max(numberOfRounds, 4)
+                    bonus = Math.max(0, K * (scores - expectedScore) - 14 * Math.sqrt(numberOfRounds));
+                }
+
+                // Calculate new rating
+                const newRating = Math.round(currentRating + K * (scores - expectedScore) + bonus);
+
+                return newRating
+            };
+
+            function provisionalRatingCalculation(scores, opponentRatings, numberOfRounds) {
+                let sumOpponentRatings = 0;
+
+                for (let i = 0; i < numberOfRounds; i++) {
+                    sumOpponentRatings += opponentRatings[i];
+                }
+
+                const avgOpponentRating = sumOpponentRatings / numberOfRounds;
+                let provisionalRating = Math.round(avgOpponentRating + (((scores * 2) - numberOfRounds) * 400) / numberOfRounds);
+
+                if (provisionalRating < 100) {
+                    provisionalRating = 100;
+                } else if (provisionalRating > 2700) {
+                    provisionalRating = 2700;
+                }
+
+                return provisionalRating;
+            };
+
+            //This is really cool, and I didn't realize I was doing it wrong until I took a close look at the USCF official rating estimator. Basically it establishes a high and low estimate for what the performance rating might be,
+            //and recursively narrows the gap by seeing if the win expectancy for its current rating estimate is too high or too low, and sandwiching the value between them after several guess and checks
+            function performanceRatingCalculation(scores, opponentRatings, numberOfRounds){
+                let currentRatingEstimate = 3000, previousRatingEstimate = 0, highEstimate = 3000, lowEstimate = 0, temp = 0;
+                if (scores != 0 && scores != numberOfRounds){
+                    while(Math.abs(currentRatingEstimate - previousRatingEstimate) > .1){
+                        previousRatingEstimate = temp;
+                        expectedScore = 0;
+
+                        for (let i = 0; i < numberOfRounds; i++) {
+                            expectedScore += winExpectancy(currentRatingEstimate, opponentRatings[i])
+                        }
+                        deltaScore = expectedScore - scores;
+                        temp = currentRatingEstimate
+
+                        if (deltaScore > 0){
+                            highEstimate = currentRatingEstimate
+                            currentRatingEstimate = (currentRatingEstimate + lowEstimate) / 2
+                        } else {
+                            lowEstimate = currentRatingEstimate
+                            currentRatingEstimate = (currentRatingEstimate + highEstimate) /2
+                        }
+                    }
+                } else if (scores == 0){
+                    for (let i = 0; i < numberOfRounds; i++) {
+                        if (opponentRatings[i] < highEstimate){
+                            highEstimate = opponentRatings[i]
+                        }
+                    }
+                    currentRatingEstimate = Math.max(100, highEstimate - 400);
+                } else {
+                    for (let i = 0; i < numberOfRounds; i++) {
+                        if (opponentRatings[i] > lowEstimate){
+                            lowEstimate = opponentRatings[i]
+                        }
+                    }
+                    currentRatingEstimate = Math.min(2700, lowEstimate + 400);
+                }
+
+                return Math.round(currentRatingEstimate)
+            }
+
+
+            function winExpectancy(currentRating, opponentRating){
+                denominator = (1+(10**(-(currentRating - opponentRating)/400)))
+                return(1/denominator)
+            }
+
+            function normCheck(score, opponentRatings, numberOfRounds) {
+                if (numberOfRounds < 4) {
+                    return null;
+                }
+
+                const normLevels = {
+                    1200: "4th Category Master",
+                    1400: "3rd Category Master",
+                    1600: "2nd Category Master",
+                    1800: "1st Category Master",
+                    2000: "Candidate Master",
+                    2200: "Life Master",
+                    2400: "Life Senior Master"
+                };
+
+                let highestNormLevel = null;
+
+                //Basically iterate through each norm level, getting the required expected score for each norm level, then rounding to the nearest half so it can be displayed in the table
+                //Also adding the plus for norms that are unobtainable
+                for (const key in normLevels) {
+                    if (normLevels.hasOwnProperty(key)) {
+                        let normExpectedScore = calculateNormExpectedScore(key, opponentRatings, numberOfRounds);
+                        const cellId = 'cell-' + key;
+                        if ((score - normExpectedScore) > 1) {
+                            highestNormLevel = normLevels[key];
+                            document.getElementById(cellId).classList.remove("not-earned")
+                            document.getElementById(cellId).classList.add("earned")
+                        } else{
+                            document.getElementById(cellId).classList.remove("earned")
+                            document.getElementById(cellId).classList.add("not-earned")
+                        }
+                        if (normExpectedScore - Math.round(normExpectedScore) >= 0){
+                            normExpectedScore = Math.round(normExpectedScore) + 0.5
+                        } else {
+                            normExpectedScore = Math.round(normExpectedScore)
+                        }
+                        if (normExpectedScore + 1 > numberOfRounds){
+                            normExpectedScore = numberOfRounds + '+'
+                        } else {
+                            normExpectedScore += 1
+                        }
+                        document.getElementById(cellId).innerText = normExpectedScore;
+                    }
+                }
+
+                return highestNormLevel;
+            }
+
+            //Calculate what score would be an impressive performance for a given norm level
+            function calculateNormExpectedScore(normKey, opponentRatings, numberOfRounds) {
+                let normExpectedScore = 0;
+
+                for (let i = 0; i < numberOfRounds; i++) {
+                    const delta = normKey - opponentRatings[i];
+
+                    if (delta <= -400) {
+                        normExpectedScore += 0;
+                    } else if (delta > -400 && delta <= 0) {
+                        normExpectedScore += 0.5 + delta / 800;
+                    } else if (delta > 0 && delta <= 200) {
+                        normExpectedScore += 0.5 + delta / 400;
+                    } else {
+                        normExpectedScore += 1;
+                    }
+                }
+                return normExpectedScore;
+            }
+
+            //Clear minimum score value from table
+            function clearCells(){
+                const cellIdsToClear = ['cell-1200', 'cell-1400', 'cell-1600', 'cell-1800', 'cell-2000', 'cell-2200', 'cell-2400'];
+                cellIdsToClear.forEach(cellId =>{
+                    const cell = document.getElementById(cellId);
+                    if (cell) {
+                        cell.textContent = '';
+                    }
+                })
+            }
+        })
+        </script>
+    </body>
+</html>
