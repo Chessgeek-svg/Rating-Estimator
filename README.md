@@ -1,30 +1,67 @@
-# USCF RATING ESTIMATOR
+# USCF Rating Estimator
+**An algorithmic tool for real-time chess performance analysis and title norm validation.**
 
-## Video Demo:  <https://youtu.be/neblpLsHpbE>
+![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![Bootstrap](https://img.shields.io/badge/bootstrap-%238511FA.svg?style=for-the-badge&logo=bootstrap&logoColor=white) ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
 
-### Description
 
-This is my attempt at a recreation of the [United States Chess Federation's (USCF) rating estimator](https://www.uschess.org/index.php/Players-Ratings/Do-NOT-edit-CLOSE-immediately.html).
+> **Historical Milestone:** This project was completed in **mid-2023**. It serves as a record of my early transition into complex frontend logic and demonstrates my growth in managing domain-specific mathematical constraints and state-management challenges.
 
-To give some background / explain the problem that my project is attempting to solve: In chess, every player has an Elo rating; think of it as a numerical estimation of a player's skill level.
-When a game is played in a USCF tournament, it affects the ratings of the players involved. If the game has a winner, they will gain rating points, and the loser will lose rating points;
-but the amount that each player's rating changes is dependent on the difference between their ratings. A player who is substantially higher rated than their opponent will gain few points from winning, but would lose a substantial amount of points if they lost, and even if they drew.
-The USCF performs these calculations, and keeps track of each player's rating in their database. However, events are only rated after their conclusion, and oftentimes not for several days to even weeks afterwards due to processing cycles and other various delays.
-As such, many players will be curious about what their rating will change to after an event ends, and thus the incentive to have an estimator, that can take all of the relevant information and use the USCF rating estimation formulas to give a highly accurate approximation of the player's post-event rating.
-I also include a performance rating, which you can think of as the rating that would be expected of a player who had the user's score against their opponents. If the user had this exact same score against opponents of the exact same rating N times, their rating would eventually settle at this performance rating
-All formulas were implemented from [Dr. Mark Glickman & Thomas Doan's paper](https://new.uschess.org/sites/default/files/media/documents/the-us-chess-rating-system-revised-september-2020.pdf) documenting the USCF rating system.
+## Video Demo
+[Watch the USCF Rating Estimator in Action](https://youtu.be/neblpLsHpbE)
 
-The USCF also awards titles to players who achieve enough "norms" of a certain level, which you can think of as a tournament performance that would be considered impressive for a player at the level the norm represents.
-The higher level titles also require the player to have reached the rating threshold of the norm at some point. I thought it would be a nice feature to include a norm calculator, which the official USCF estimator lacks, which tells the user the highest level of norm they earned, and the minimum score that would be required to earn a norm for each level.
-I chose this as my project because it was a tool I used all the time as a kid, and I felt like it would be a good test of my skills to try and recreate it. The USCF's official version is also rather dated and unappealing, and I felt like I could make a more user friendly, visually appealing option, while also cutting some fluff that would only apply to a very specific subset of users.
+## Motivation & Problem Statement
+In United States Chess Federation (USCF) play, ratings are the primary metric for skill estimation and tournament pairing. However, the official USCF ecosystem often presents two significant hurdles for active players:
 
-The webpage is not difficult to use, but also requires some explanation if the user is unfamiliar with elo ratings. The top 2 input fields (Rounds, Score) are asking for numeric values about the tournament/competition that the user competed in. Rounds is simply the number of rounds in the event, while score is the sum of the user's points earned in the event. A win is counted as 1 point, a draw as .5 a point, and a loss as 0 points. The other two input fields, (Current Rating, Games Played) are asking optional questions about the user's level and volume of experience. Current rating is asking for the user's elo rating, which is an integer. Prior games is asking how many uscf rated games the user has completed previously, which should be an integer. It is defaulted at 50+, since the majority of players using the estimator would have already played 50+ games, and after 50 the value becomes irrelevant to the calculation. If no value is entered, it will be treated as 0. This also helps determine which rating formula should be used: any value less than 8 means the post event rating should be calculated using the provisional rating formula. In addition, if the current rating field is left empty, the provisional rating formula will be used regardless of the prior games value. The provisional rating formula is also used to determine the performance rating.
-For each round, a dynamic input field is created. This field asks for the integer value of the opponent's rating in that round. The number of fields generated can be anywhere between 1 and 20; chess tournaments these days essentially never have that many rounds (exceptionally few are more than 9 rounds), so the user shouldn't need more than that. The user may elect to leave certain fields empty; only fields with valid USCF ratings will be added to the opponentRatings array that is used for the rating and norm calculations, and the length of that array is used to determine how many games were actually played, regardless of the value entered for rounds.
+* **Processing Latency:** Official tournament results are frequently delayed by days or weeks, leaving players in the dark about their updated standing.
+* **Missing Features:** The official estimator lacks Norm calculations, which are essentially performance thresholds that must be met 5 times to earn titles like *Candidate Master* or *Life Master*.
 
-Once the player clicks the rate button, the values entered will be used first for the normcheck, and then for the performance rating, and then to determine which rating calculation should be used, before being used in said calculation. A table will appear with one cell for the user's post event rating, one for the norm they earned, if any, and one for the performance rating. If 4 or more valid opponent ratings are found, the table below will fill with the values denoting the minimum score that would've been required to earn each level of norm.
+This project was engineered to bridge these gaps. It provides an immediate, user-friendly interface for calculating post-event ratings and automated title norm validation. By implementing the mathematical formulas designed by Dr. Mark Glickman, the tool transforms a "black box" calculation into a transparent, real-time dashboard for competitive players.
 
-So to begin, once I decided to make this the focus of my project, I needed to decide what medium to go through. The USCF official one is on a single webpage, which makes it easy for the user to enter information into the various fields, but I didn't want to write the whole application in javascript. I decided initially to treat it as a form, and use flask to POST, like in Finance. This would ultimately become a major headache for me, and had I simply committed to becoming more comfortable with Javascript from the start, I likely could have saved a bunch of time, as I went through numerous rewrites of my functions. Regardless, I wrote up a command line function in python as a proof of concept, and ironed out most of the problems with my rating formulas from that. With that done, I started making the initial form that the user would enter information into, primarily the number of rounds in their tournament, and their score. The number of games a player has completed prior to this tournament determines which rating formula should be used, and also factors into the "K factor" bonus that a player may receive. And of course, if the user wants to see how their rating will change, they may enter their rating if they have one.
-Now I should mention that early on in my development of the website, I discovered that a gentleman named Nathaniel Fernandes had also tried his hand at reimagining the uscf rating estimator; you can find his version [here](https://chessintellect.com/tech/uscf-rating-norm-calculator/). I think he did a fantastic job, and I actually considered scrapping what I had and changing my project, since I felt he had done such a great job of simplifying and improving the original calculator, and even included the norm calculation as well. I decided ultimately that I had done enough work with my proof of concept that I ought to see it through, and make my own changes and improvements where I could. Despite this, there are certainly some design choices that I couldn't help but admire and incorporate myself, which I again credit to Mr. Fernandes's excellent design.
-The biggest influence Mr. Fernandes's calculator had on me was the input fields for opponents ratings. WHile the USCF calculator offers a static 12 input fields, I thought it would be visually nice to only show one input field for each round that the user played, and dynamically adjust it based on the value for rounds. It was also very important to me that  aplayer would be able to change the number of rounds without clearing the values already entered into the dynamically generated input fields. These design philosophies, when combined, created another major headache, and ultimately led me to abandon my POST implementation in favor of not having to reload the page. It was very difficult to get the dynamic input fields to be added and removed correctly, and further difficult to prevent them from being cleared when the number of rounds was changed. Ultimately, I just had too many issues where after submitting the form and navigating backwards, the values wouldn't be saved, or they would be saved but then all but one would be deleted when the number of rounds were changed, or whatnot. In addition to the fact that posting the form seemed rather clunky if the user wanted to mess around with various ratings and scores, it just made more sense to switch away from flask and avoid these issues. In retrospect, I don't think the dynamic generation of inputs is necessary, I'm sure just applying display:none to some inputs and then toggling that as needed with round number changes would've been sufficient and far far far simpler.
-Moving away from flask of course meant that I had to rewrite my functions in JS which I did, and it allowed me to take out some code I had that focused on saving values in local memory with the form submission. I added a "rate" button with an onclick listener that would take all the user-inputted values and run the necessary calculations, and a clear form button to allow the user to reset. At this point I had met all of my basic requirements, but I wanted to add the norm calculator and really flesh out the idea fully. In my initial implementation I just showed the user what norm level they earned, but I wanted to be more transparent about the calculation, so the user could see how tinkering with some of the values would change the norm level they earned. Ultimately the best way to show this seemed to me to be a table showing the level of norms and the score that would've been needed to earn it. I initially showed the floating point value that the user would need to score (e.g. 1.875), but since chess scores can only be integers or .5, I wrote some extra code that would round the score up if needed, and included a plus next to that number to signify that no possible score would've earned a norm against those opponents.
-With that done, I turned my attention to styling the page. I tinkered around more with the dynamic input generation: I had initially had each input field appear one row below the others. This worked fine for debugging, but it doesn't look very good, and is a pretty poor use of space on the website. I changed it to print 4 inputs per row before making a new line, and centered my form on the page. In doing so, I was having trouble with keeping the inputs centered within the border of the container, and keeping that consistent and visually appealing with different viewports. Eventually, I actually ended up changing tact and used some bootstrap styling to keep the inputs centered in their space. This only reasonably allowed me to fit two per row, which I decided looked nice as well and so on I went. From here the changes are all minor: choosing a [color palette](https://coolors.co/) for the site, conditional formatting on the required norm scores table to make it easier to understand, some tinkering with the rate button and clear form buttons, and that was it!
+## Engineering Journey & Technical Progression
+The development of this tool followed a path of "progressive refinement," moving through several architectural paradigms as the complexity of the requirements evolved.
+
+### Phase 1: The Python Proof-of-Concept
+The project began as a basic command-line utility in Python focused on verifying the fundamental USCF rating formulas. This initial version was purely functional, intended to confirm that I could accurately replicate the standard rating changes for established players before attempting a full web implementation.
+
+### Phase 2: Architectural Pivot (Flask to Vanilla JS)
+Initially, I prototyped the web application using Python and Flask. However, I encountered a significant "state-management" challenge: traditional `POST` requests caused page reloads that cleared dynamically generated input fields. To prioritize UI Responsiveness and UX Consistency, I pivoted to a pure Vanilla JavaScript implementation. This shift allowed for:
+* **Dynamic DOM Manipulation:** Generating between 1 and 20 round inputs instantly without page refreshes.
+* **Client-Side Persistence:** Ensuring user data remains intact even if the number of rounds is adjusted mid-entry.
+### Phase 3: Mathematical Integrity & Algorithmic Refinement
+In the final stage, I moved beyond basic ratings to implement the most complex parts of the USCF system. This included the recursive "sandwich" method for calculating performance ratings, as well as a comprehensive Title Norm validator. During this phase, I analyzed modern design choices by peers in the chess-tech space to ensure the interface was streamlined, removing some of the clutter from the official tool in favor of features that are important to more users.
+## System Logic Flow
+This diagram illustrates how the application processes user data, from initial validation through the recursive calculation of performance ratings and norm checks.
+
+
+```mermaid
+graph TD
+    A[User Inputs: Rounds, Score, Rating] --> B{Valid Ratings Found?}
+    B -- No --> C[Alert: Invalid Entry]
+    B -- Yes --> D[Run Norm Validation]
+    D --> E[Recursive Performance Rating Calc]
+    E --> F{Prior Games > 8?}
+    F -- Yes --> G[Apply Established Formula]
+    F -- No --> H[Apply Provisional Formula]
+    G --> I[Render Results Table]
+    H --> I
+```
+## Usage: "Time to Hello World"
+To quickly estimate your performance and check for title norms, follow these steps:
+
+1.  **Tournament Overview:** Input the total number of rounds (1–20) and your final score (1 point for a win, 0.5 for a draw).
+2.  **Player Context:** Enter your current USCF rating and the number of prior rated games. If you have played fewer than 8 games, the tool will automatically apply the provisional rating formula.
+3.  **Opponent Data:** Fill in the dynamically generated rating fields for each round. Valid USCF ratings (100–3000) are required for an accurate calculation.
+4.  **Analyze:** Click **"Rate"** to instantly generate a results table showing your New Rating, Performance Rating, and any earned Norms.
+
+## Technical Features & Mathematical Logic
+The application’s engine is built on the rigorous standards proposed by Dr. Mark Glickman and adopted by the USCF.
+
+* **Recursive Performance Rating:** For non-perfect scores, the tool uses an iterative "sandwich" method to narrow the gap between expected and actual scores until a precise performance rating is found.
+* **Dynamic K-Factor Calculation:** The engine adjusts the "K-factor" (sensitivity of rating change) based on the user's current rating and effective games played.
+* **Automated Norm Validation:** The system iterates through multiple title thresholds (from 4th Category Master to Life Senior Master) to determine eligibility based on field strength and score.
+* **Responsive State Management:** Built with Vanilla JavaScript to ensure that round-entry fields update dynamically without data loss or page refreshes.
+
+## License
+This project is licensed under the **MIT License**. This permissive license allows for commercial use, modification, and distribution, provided that the original license and copyright notice are included.
+
+See the [LICENSE](LICENSE.md) file for the full legal text.
